@@ -37,7 +37,7 @@ contract Deploy is Script {
             vm.toString(block.timestamp),
             ",",
             '"contracts":{',
-            '","emergencyWithdraw":"',
+            '"emergencyWithdraw":"',
             vm.toString(address(emergencyWithdraw)),
             '","safeERC20Transfer":"',
             vm.toString(address(safeERC20Transfer)),

@@ -1,1 +1,5 @@
-# BASE LAYER INTERACTION
+# ASSET HANDLING
+
+```bash
+cartesi deposit
+```
