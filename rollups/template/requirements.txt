@@ -1,0 +1,3 @@
+--find-links https://prototyp3-dev.github.io/pip-wheels-riscv/wheels/
+eth-abi==5.2.0
+requests == 2.31.0
