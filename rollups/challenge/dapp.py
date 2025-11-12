@@ -12,7 +12,6 @@ logger.info(f"HTTP rollup_server url is {rollup_server}")
 # Portal addresses
 ERC20_PORTAL_ADDRESS = "0xc700D6aDd016eECd59d989C028214Eaa0fCC0051".lower()
 INPUT_BOX_ADDRESS = "0xc70074BDD26d8cF983Ca6A5b89b8db52D5850051".lower()
-
 # print(Web3.keccak(b"transfer(address,uint256)"))
 ERC20_TRANSFER_FUNCTION_SELECTOR = b'\xa9\x05\x9c\xbb*\xb0\x9e\xb2\x19X?JY\xa5\xd0b:\xde4m\x96+\xcdNF\xb1\x1d\xa0G\xc9\x04\x9b'[:4]
 
@@ -92,39 +91,33 @@ def handle_erc20_deposit(payload):
     amount = int.from_bytes(binary[40:72], "big")
     deposit_data = binary[72:]
 
-    logger.info(f"ERC20 Deposit received:")
-    logger.info(f"Token: {token_address}")
-    logger.info(f"Depositor: {depositor}")
-    logger.info(f"Amount: {amount}")
-    logger.info(f"Deposit data: {deposit_data}")
-
-    if amount == 0:
-        logger.info("Amount is 0, skipping voucher creation")
+    logger.info(f"----------- NOVO DEPOSITO ----------")
+    logger.info(f"----------- deposito de {amount} ----------")
+    global amount_deposited
+    amount_deposited += amount
+    logger.info(f"----------- restante a ser arrecadado: {50000000000000000000 - amount_deposited} ----------")
+    if amount_deposited >= 50000000000000000000:
+        logger.info("--------- CROWDFUNDING CONCLUIDO! ---------")
         send_report(
-            {"payload": str2hex("Deposit amount was 0, no action taken")})
+            {"payload": str2hex("Crowdfunding concluído!")})
+
+
+        # Create voucher to transfer tokens back to depositor
+        # Function to be called in voucher [token_address].transfer([address receiver],[uint256 amount])
+        receiver = "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266"
+        data = encode(['address', 'uint256'], [receiver, amount_deposited])
+        voucher_payload = binary2hex(ERC20_TRANSFER_FUNCTION_SELECTOR + data)
+
+        voucher = {
+            "destination": token_address,
+            "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
+            "payload": voucher_payload
+        }
+
+        send_voucher(voucher)
+        logger.info(f" -- VOUCHER CRIADO PARA ENVIAR {amount_deposited} --")
+
         return
-
-    # Create voucher to transfer tokens back to depositor
-    # Function to be called in voucher [token_address].transfer([address receiver],[uint256 amount])
-    receiver = depositor
-    data = encode(['address', 'uint256'], [receiver, amount])
-    voucher_payload = binary2hex(ERC20_TRANSFER_FUNCTION_SELECTOR + data)
-
-    voucher = {
-        "destination": token_address,
-        # No ETH value for ERC20 transfers
-        "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
-        "payload": voucher_payload
-    }
-
-    send_voucher(voucher)
-    logger.info(f"Voucher created to return {amount} tokens to {depositor}")
-
-    # Send notice about the operation
-    notice_payload = str2hex(
-        f"Processed ERC20 deposit: {amount} tokens from {depositor}, voucher created")
-    send_notice({"payload": notice_payload})
-
 
 def handle_advance(data):
     logger.info(f"Received advance request data")
@@ -176,6 +169,12 @@ handlers = {
 }
 
 finish = {"status": "accept"}
+
+logger.info("----------- INICIANDO CROWDFUNDING ----------")
+logger.info("----------- META: $50")
+logger.info("---------------------------------------------")
+
+amount_deposited = 0
 
 while True:
     logger.info("Sending finish")
